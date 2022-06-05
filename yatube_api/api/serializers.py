@@ -36,7 +36,6 @@ class FollowSerializer(serializers.ModelSerializer):
         default=serializers.CurrentUserDefault()
     )
     following = serializers.SlugRelatedField(
-        source='author',
         queryset=User.objects.all(),
         slug_field='username',
     )
@@ -53,7 +52,7 @@ class FollowSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        if data['user'] == data['author']:
+        if data['user'] == data['following']:
             raise serializers.ValidationError(
                 'Зачем подписываться на себя?'
             )

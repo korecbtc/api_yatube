@@ -4,7 +4,7 @@ from rest_framework import filters, permissions, status, viewsets
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.response import Response
 
-from posts.models import Follow, Group, Post
+from posts.models import User, Group, Post
 
 from .permissions import IsAuthorOrReadOnly
 from .serializers import (CommentSerializer, FollowSerializer, GroupSerializer,
@@ -22,7 +22,7 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def perform_update(self, serializer):
-        if serializer.validated != self.request.user:
+        if serializer.instance.author != self.request.user:
             raise PermissionDenied('Изменение чужого контента запрещено!')
         super(PostViewSet, self).perform_update(serializer)
 
@@ -59,10 +59,13 @@ class GroupViewSet(viewsets.ModelViewSet):
 
 
 class FollowViewSet(viewsets.ModelViewSet):
-    queryset = Follow.objects.all()
     serializer_class = FollowSerializer
     filter_backends = (filters.SearchFilter, )
-    search_fields = ('user__username', 'author__username')
+    search_fields = ('user__username', 'following__username')
+
+    def get_queryset(self):
+        user = get_object_or_404(User, username=self.request.user.username)
+        return user.follower
 
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
