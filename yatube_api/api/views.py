@@ -1,11 +1,14 @@
-from rest_framework import viewsets, permissions, status
-from .serializers import PostSerializer, CommentSerializer, GroupSerializer, FollowSerializer
-from posts.models import Post, Group, Follow
-from .permissions import IsAuthorOrReadOnly
 from django.core.exceptions import PermissionDenied
-from rest_framework.response import Response
-from rest_framework.pagination import LimitOffsetPagination
 from django.shortcuts import get_object_or_404
+from rest_framework import filters, permissions, status, viewsets
+from rest_framework.pagination import LimitOffsetPagination
+from rest_framework.response import Response
+
+from posts.models import Follow, Group, Post
+
+from .permissions import IsAuthorOrReadOnly
+from .serializers import (CommentSerializer, FollowSerializer, GroupSerializer,
+                          PostSerializer)
 
 
 class PostViewSet(viewsets.ModelViewSet):
@@ -19,7 +22,7 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
     def perform_update(self, serializer):
-        if serializer.instance.author != self.request.user:
+        if serializer.validated != self.request.user:
             raise PermissionDenied('Изменение чужого контента запрещено!')
         super(PostViewSet, self).perform_update(serializer)
 
@@ -58,4 +61,8 @@ class GroupViewSet(viewsets.ModelViewSet):
 class FollowViewSet(viewsets.ModelViewSet):
     queryset = Follow.objects.all()
     serializer_class = FollowSerializer
+    filter_backends = (filters.SearchFilter, )
+    search_fields = ('user__username', 'author__username')
 
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
